@@ -1,0 +1,42 @@
+React Router decide karta hai:
+
+URL ke hisaab se kaunsa component dikhana hai
+
+/login  →  <Login />
+/register → <Register />
+
+🧪 WITHOUT ROUTER (Ye bhi possible hai)
+function App() {
+  return (
+    <>
+      <Login />
+      <Register />
+    </>
+  );
+}
+
+
+✔ Components render ho jayenge
+❌ URL change nahi hoga
+❌ Real app feel nahi
+
+🧪 WITH ROUTER (Real-world app)
+function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+    </Routes>
+  );
+}
+
+
+✔ URL changes
+✔ Back / forward kaam karta hai
+✔ Real application behavior
+
+Components likhna → router independent
+
+Navigation / multiple pages → router dependent
+
+“React Router is used to map UI components to different URLs and enable client-side navigation without reloading the page.”

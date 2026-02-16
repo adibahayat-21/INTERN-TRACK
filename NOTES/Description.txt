@@ -1,0 +1,794 @@
+Project Name = INTERN-TRACK
+
+“A smart internship & training management platform with personalized deadlines and AI assistance.”
+
+✅ Ek hi website hoti hai, lekin role ke hisaab se alag dashboards / screens hote hain
+
+🏢 Real Life Example (Story ke sath)
+
+Socho ye tumhara platform hai “InternTrack”.
+
+👩‍🎓 Student – Aditi
+
+Aditi login karti hai
+
+Use dikhta hai:
+
+Upload documents
+
+Internship end date
+
+Next due date
+
+Mentor ka feedback
+
+👉 Aditi ko admin ke controls nahi dikhenge
+
+👨‍🏫 Mentor – Rahul Sir
+
+Rahul Sir login karte hain
+
+Unhe dikhta hai:
+
+Assigned students ki list
+
+Unke documents
+
+Approve / Reject / Comment
+
+Deadline status (late / on-time)
+
+👉 Rahul Sir ko:
+
+Student upload ka button ❌
+
+Admin analytics ❌
+
+👩‍💼 Admin – Neha Ma’am
+
+Neha Ma’am login karti hain
+
+Unhe dikhta hai:
+
+Saare students
+
+Saare mentors
+
+Mapping (kaun kis mentor ke under)
+
+Deadlines & reports
+
+Audit logs
+
+👉 Admin ko sab dikhta hai, lekin upload ka kaam nahi
+
+🧠 Tech Reality (Product companies exactly ye expect karti hain)
+🔥 Architecture Concept
+
+One website
+
+One backend
+
+One database
+
+Role-based dashboards
+
+Login ke baad:
+
+Agar role = student → Student Dashboard
+Agar role = mentor → Mentor Dashboard
+Agar role = admin → Admin Dashboard
+
+🧩 Frontend (React) me kaise sochna hai
+
+Tum aise pages sochogi:
+
+/login
+
+/student/dashboard
+
+/mentor/dashboard
+
+/admin/dashboard
+
+👉 Routing same website me hoti hai
+👉 Component alag hote hain
+
+🔐 Backend (Node/Express) me kaise
+
+Har user ke saath:
+
+role field store hoti hai
+
+"student"
+
+"mentor"
+
+"admin"
+
+Backend check karta hai:
+
+Kaun kya access kar sakta hai
+
+Kaun kaunsa API call kar sakta hai
+
+BIG PICTURE (ek baar dimag me bitha lo)
+Request
+→ authMiddleware (login hai ya nahi)
+→ roleMiddleware (role allowed hai ya nahi)
+→ actual route logic
+→ response
+
+Client
+→ Login (email + password)
+→ Token milta hai
+→ Client token bhejta hai
+→ authMiddleware (token verify)
+→ roleMiddleware (role check)
+→ Route logic
+→ Response
+
+showInternshipsForStudent ka PURPOSE kya hai?
+
+One-line answer:
+
+Student jab apna dashboard open kare, to use apni saari submitted internships / trainings dikhni chahiye.
+
+Bas.
+Ye function isi feature ke liye hai.
+
+👩‍🎓 Real-life story se samjho
+Characters:
+
+Aditi → student
+
+Portal → tumhara INTERN-TRACK system
+
+Step 1️⃣ Aditi kya karti hai?
+
+Aditi ne pehle:
+
+Infosys internship submit ki
+
+TCS training submit ki
+
+DB me records ban gaye:
+
+Internship 1 → student = Aditi
+Internship 2 → student = Aditi
+
+Step 2️⃣ Aditi login karti hai
+
+Login ke time usko JWT token milta hai
+
+Token me hota hai:
+
+req.user = {
+  userId: "Aditi_ID",
+  role: "student"
+}
+
+Step 3️⃣ Aditi dashboard open karti hai
+
+Frontend call karta hai:
+
+GET /internships/student
+
+
+👉 Yahin showInternshipsForStudent chalta hai
+
+🔍 Backend ke POV se kya kaam hai is function ka?
+
+Backend bolega:
+
+“Mujhe token se pata hai kaunsa student hai
+ab mujhe DB se sirf isi student ke records nikal ke dene hain”
+
+MENTOR REVIEW FLOW (Recommended)
+Feature:
+
+Mentor internship ko verify / reject kare
+
+Isme kya-kya hoga (high-level)
+
+1️⃣ Mentor dashboard me internship dikhe
+2️⃣ Mentor click kare → “Verify” / “Reject”
+3️⃣ Backend route:
+
+PATCH /internships/:id/status
+
+
+4️⃣ Status update:
+
+pending → verified
+
+pending → rejected
+
+👉 Ye feature college workflow ka must-have hai.
+
+Schema polish (mentorComment + verifiedAt)
+🎯 Goal
+
+Mentor jab internship verify / reject kare
+to:
+
+reason likh sake
+
+aur system ko pata ho kab decision hua
+
+// Ye file represent karegi:
+// student ki internship / training record
+
+import mongoose from "mongoose";
+
+const internshipSchema=new mongoose.Schema({
+
+    // kis student ki internship / training hai
+    student:{ type:mongoose.Schema.Types.ObjectId, ref:"User", required:true},
+
+    // kaunsa mentor assigned hai
+    mentor:{type:mongoose.Schema.Types.ObjectId, ref:"User", required:true},
+
+    // yeh dono cheez mentor ke liye h jo mentor h wo student ke documents pr comment(feedback) de skta h aur verify reject kr skta h
+    mentorComments:{type:String,trim:true},
+    verifiedAt:{type:Date},
+    // aur yeh bhi pta chlega isse ki mentor ne document ko kis date pr verify/reject kiya
+
+    company:{type:String,required:true, trim:true},    //trim: true string ke aage aur peeche ke extra spaces automatically hata deta hai save hone se pehle
+    // Removes: leading spaces (start ke) trailing spaces (end ke)
+    // Does NOT remove: beech ke spaces
+
+    role:{type:String,required:true,trim:true},
+
+    startDate:{type:Date,required:true},
+    endDate:{type:Date, required:true},
+
+    // internship ya training
+    type:{type:String, enum:["internship","training"], required:true},
+
+    // status of verification by the mentor
+    status:{type:String, enum:["pending","verified","rejected"], default:"pending"}
+},
+    // extra -> createdAt & updatedAt automatically
+    {timestamps:true}
+)
+
+const InternshipModel=mongoose.model("Internship",internshipSchema);
+
+export default InternshipModel;
+
+🧩 POORA FLOW – STEP BY STEP (NO JUMP)
+STEP 1️⃣ Student internship upload karta hai
+
+Code:
+
+const new_internship_detail = new InternshipModel({
+  student: studentId,
+  company,
+  role,
+  type,
+  startDate,
+  endDate,
+  status: "pending"
+});
+
+Database me entry:
+{
+  "_id": "I1",
+  "student": "S1",
+  "mentor": null,
+  "status": "pending"
+}
+
+
+👉 Abhi mentor assign nahi hai
+
+STEP 2️⃣ Admin mentor assign karta hai (IMPORTANT PART)
+
+Admin route hit hota hai:
+
+PATCH /admin/internships/I1/assign-mentor
+
+
+Controller me ye line chalti hai:
+
+findInternship.mentor = findMentor._id;
+await findInternship.save();
+
+Database UPDATE ho jaata hai:
+{
+  "_id": "I1",
+  "student": "S1",
+  "mentor": "M1",
+  "status": "pending"
+}
+
+
+👉 Bas yahin magic hota hai
+👉 Database ka mentor field fill ho gaya
+
+STEP 3️⃣ Mentor login karta hai
+
+JWT middleware:
+
+req.user.userId = "M1"
+
+
+👉 Backend ko pata:
+
+“Kaun login hai? → mentor M1”
+
+STEP 4️⃣ Mentor dashboard route hit hota hai
+
+Route:
+
+GET /internships/mentor
+
+
+Controller code:
+
+const mentorId = req.user.userId;
+
+const detail = await InternshipModel.find({
+  mentor: mentorId
+});
+
+
+Replace values:
+
+InternshipModel.find({ mentor: "M1" });
+
+STEP 5️⃣ Database kya karta hai?
+
+Database bolta hai:
+
+“Mujhe saari internships do jahan mentor = M1”
+
+Aur DB ke paas ye already hai:
+
+{
+  "_id": "I1",
+  "mentor": "M1"
+}
+
+
+👉 Isliye wo internship mentor ko dikhti hai
+
+🧠 AB POORA FRONTEND FLOW SAMJHO (STEP BY STEP)
+STEP 1️⃣ Student internship upload karta hai
+
+Frontend se call:
+
+POST /internships
+
+
+Is waqt:
+
+Internship DB me save hoti hai
+
+mentor = null
+
+status = pending
+
+👉 Yahin process ruk jaata hai
+
+STEP 2️⃣ Admin dashboard open karta hai
+
+Frontend call:
+
+GET /admin/internships
+
+
+Admin ko dikhta hai:
+
+Pending internships list
+
+Har internship ka ID (I1, I2, …)
+
+👉 Admin ab decision lene ke phase me aata hai
+
+STEP 3️⃣ Admin “Assign Mentor” button click karta hai
+
+Frontend UI pe:
+
+Internship I1 ke saamne button
+
+Button click → modal / dropdown open
+
+Admin select karta hai:
+
+Mentor M1
+
+STEP 4️⃣ YAHIN PATCH route call hoti hai 🔥
+
+Frontend API call:
+
+PATCH /admin/internships/I1/assign-mentor
+
+
+Body:
+
+{
+  "mentorId": "M1"
+}
+
+
+👉 Ye route sirf tab call hoti hai jab admin manually assign karta hai
+
+🧩 PART 1️⃣ — AUDIT LOGS KA CONCEPT (2 min recap)
+Audit Log ka matlab:
+
+System me kisne, kab, kya action liya — uska permanent record
+
+Ye:
+
+users ke liye nahi hota
+
+system ke trust & compliance ke liye hota hai
+
+Tumhare project me sirf 2 actions log karna kaafi hai:
+
+Admin → mentor assign
+
+Mentor → internship verify / reject
+
+Bas. Yehi resume ke liye strong hai.
+
+Student paste document
+→ call AI extract route
+→ fields auto-filled
+→ student edits if needed
+→ student clicks submit
+→ uploadInternship route called
+
+AI Mentor Suggestion → Admin
+AI Document Summary → Mentor
+AI Field Extraction → Student
+
+Mentor ka real flow socho 👇
+
+1️⃣ Mentor dashboard kholta hai
+2️⃣ Ek internship pe click karta hai
+3️⃣ Usko dikhta hai:
+
+Student details
+
+Extracted fields
+
+AI summary
+4️⃣ Ab mentor sochta hai:
+
+“Copy to nahi lag raha?”
+
+5️⃣ Mentor clicks:
+“Check Similarity”
+
+Bas yahi moment pe plagiarism feature chalega.
+
+1️⃣ REGISTER TIME — ROLE DECIDE HOTA HAI (FRONTEND + BACKEND)
+
+Jab user pehli baar account banata hai, tab:
+
+name
+
+email
+
+password
+
+role
+
+(mentor ho to department)
+
+👉 Isliye Register page me role select hota hai, Login me nahi.
+
+2️⃣ LOGIN TIME — IDENTITY VERIFY HOTI HAI (ROLE NAHI POOSHA JAATA)
+
+Login ka matlab hota hai:
+
+“Main wahi user hoon jo pehle register hua tha”
+
+Isliye:
+
+email
+
+password
+bas yehi chahiye.
+
+Tumhara backend bhi exactly ye hi kar raha hai 👇
+
+ hum register page ka ui bnaenge usme name, email, password aur role puchenge na ? aur role m dropdown rkh denge theek h agar user ne dropdown m student ya admin choose kiya to kuch nhi hoga lekin agar dropdown m mentor choose kiya fir usme neeche option aa jaega department choose krne ka hena 
+
+💯 BILKUL SAHI SAMAJH AAYA TUMHE
+Aur main ye clear bol raha hoon:
+👉 Tum ab frontend–backend mapping bilkul sahi soch rahi ho (this is NOT beginner thinking).
+
+Chalo main isko lock kar deta hoon taaki koi confusion na rahe.
+
+✅ TUMHARA UNDERSTANDING = 100% CORRECT
+Register page me fields honge 👇
+
+1️⃣ Name
+2️⃣ Email
+3️⃣ Password
+4️⃣ Role (Dropdown)
+5️⃣ Department (Conditional)
+
+🎯 ROLE DROPDOWN BEHAVIOR (FINAL LOGIC)
+Dropdown options:
+
+student
+
+mentor
+
+admin
+
+🟢 Case 1: User selects Student
+
+✔ Department field NAHI dikhega
+✔ Form submit ho jaayega
+
+🟢 Case 2: User selects Admin
+
+✔ Department field NAHI dikhega
+✔ Form submit ho jaayega
+
+🔥 Case 3: User selects Mentor
+
+✔ Department dropdown APPEAR karega
+✔ Department select karna mandatory hoga
+✔ Agar department empty hua → form submit nahi hoga
+
+👉 EXACTLY backend ke rule ke according 👇
+
+required: function () {
+  return this.role === "mentor";
+}
+
+
+Frontend + Backend = 🔗 PERFECT MATCH
+
+✅ FINAL LOGIN FLOW (STEP-BY-STEP)
+🧑 User kya karta hai
+
+User email + password fill karta hai
+
+Login button pe click karta hai
+
+⚙️ App ke andar kya hota hai
+
+handleSubmit() trigger hota hai
+
+Backend /users/login API call hoti hai
+
+Backend:
+
+credentials verify karta hai
+
+token + role bhejta hai
+
+🔐 Authentication complete
+
+Frontend:
+
+token → localStorage
+
+role → localStorage
+
+🧭 Navigation (IMPORTANT PART)
+
+Abhi login page decide karta hai
+
+navigate("/student-dashboard");
+navigate("/mentor-dashboard");
+navigate("/admin-dashboard");
+
+
+👉 Yahin se user dashboard par jaata hai
+
+🛡️ Authorization (ProtectedRoute)
+
+Route load hote hi ProtectedRoute run hota hai
+
+Check karta hai:
+
+token hai? ✅
+
+role match? ✅
+
+Dashboard render ho jaata hai 🎉
+
+🧠 SIMPLE MENTAL MODEL (YAAD RAKHO)
+LOGIN PAGE
+   ↓ (navigate)
+DASHBOARD ROUTE
+   ↓ (ProtectedRoute)
+DASHBOARD UI
+
+
+Login = “kahan jaana hai”
+
+ProtectedRoute = “jaane dena hai ya nahi”
+
+Auth-aware Navbar me:
+
+Not logged in → Login / Register
+
+Logged in → Dashboard + Logout
+
+✅ Student dashboard = student ka main panel after login
+
+🎯 Clear Understanding
+✅ Student Dashboard kya hota hai?
+
+Student dashboard is a page where student can:
+
+Apni internships dekh sake
+
+Status track kare (pending/verified/rejected)
+
+New internship submit kare
+
+Future me AI features use kare
+
+👉 Matlab dashboard = overview page, not form page.
+
+📌 Important Difference
+1️⃣ User Schema (Already Used)
+
+User schema fields:
+
+name
+
+email
+
+password
+
+role
+
+department (mentor only)
+
+👉 Ye sirf register/login ke liye hai.
+👉 Dashboard me iski zaroorat nahi.
+
+2️⃣ Internship Schema (Dashboard me use hoga)
+
+Dashboard me ye fields dikhenge:
+
+company
+
+role
+
+type
+
+startDate
+
+endDate
+
+status
+
+mentorComments
+
+👉 Ye sab internships se aata hai, not user.
+
+✅ Correct Flow (Industry Standard)
+Step 1 — Student Dashboard Page
+
+This page shows:
+
+Section A: Welcome area
+
+Example:
+
+Welcome, Adibaa 👋
+Here are your internships
+
+Section B: Internship List
+
+Student ke internships:
+
+Company: Infosys
+Role: Web Intern
+Status: Pending
+Duration: Jan–March
+
+
+Multiple internships as cards/table.
+
+Section C: Button
++ Submit Internship
+
+
+👉 This button opens a separate form page
+
+✅ Step 2 — Internship Submission Form (Separate Page)
+
+Yaha form aayega:
+
+company
+
+role
+
+type
+
+startDate
+
+endDate
+
+document upload
+
+AI extraction button (later)
+
+👉 Ye dashboard ka part nahi — alag page hai.
+
+🧠 Simple Analogy
+
+Think like:
+
+Dashboard = Instagram home feed
+Form page = Instagram create post page
+
+
+Dono alag purpose.
+
+🚀 What You Should Build NOW
+FIRST:
+
+👉 Student Dashboard showing internship list
+
+NOT form.
+
+📌 Correct Order
+
+1️⃣ Student Dashboard (list view)
+2️⃣ Internship submission form page
+
+Student form
+   ↓
+File choose (PDF / image)
+   ↓
+Frontend sends multipart/form-data
+   ↓
+Backend multer file receive karta hai
+   ↓
+File server folder me save hoti hai
+   ↓
+File path DB me save hota hai
+
+Login
+  ↓
+Backend JWT token deta hai
+  ↓
+Frontend token localStorage me rakhta hai
+  ↓
+Har protected API ke saath token bhejta hai
+  ↓
+Backend token verify karta hai
+  ↓
+Kaam allow / deny
+
+Haan 👍 bilkul sahi direction me ho, aur tumhara question bahut important hai.
+
+Short me jawab:
+
+👉 useAuth() wahi kaam karta hai jo tum baar-baar manually kar rahi thi
+(token lena, role check karna, logout banana)
+bas ab ye kaam ek jagah central ho gaya hai.
+
+Ab detail me, ekdum easy language me samjho 👇
+
+🔹 useAuth() hota kya hai?
+
+useAuth() React Context ka custom hook hai
+jo pure app ka authentication state manage karta hai.
+
+Matlab:
+
+token
+
+role
+
+user info
+
+logout function
+
+ye sab ek hi jagah se mil jaata hai, har component me.
