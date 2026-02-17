@@ -188,11 +188,11 @@ const StudentDashboard = () => {
 
 {/* 👇 HEADER ROW */}
   <div className="internship-head">
-    <span style={{marginLeft:"-25px"}}>Company</span>
-    <span style={{marginLeft:"-15px"}}>Role</span>
+    <span style={{marginLeft:"15px"}}>Company</span>
+    <span style={{marginLeft:"5px"}}>Role</span>
     <span >Type</span>
-    <span style={{marginRight:"20px"}}>Duration</span>
-    <span>Status</span>
+    <span style={{marginRight:"5px"}}>Duration</span>
+    <span style={{marginLeft:"15px"}}>Status</span>
   </div>
 
 
@@ -215,12 +215,12 @@ const StudentDashboard = () => {
           return (
             <div className="table-row" key={item._id}>
               <span className="company-name" style={{marginLeft:"10px"}}>{item.company}</span>
-              <span style={{marginLeft:"40px"}}>{item.role}</span>
+              <span style={{marginLeft:"-5px"}}>{item.role}</span>
 
               <span
                 className={`pill ${
                   item.type === "training" ? "training" : ""
-                }`}
+                }`}  style={{marginLeft:"-5px", marginRight:"10px"}}
               >
                 {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
               </span>
@@ -263,10 +263,6 @@ const StudentDashboard = () => {
       <span className="active-dot"></span>
       Active
     </div>
-
-    <button className="profile-btn">
-      View Full Profile
-    </button>
 
   </div>
 

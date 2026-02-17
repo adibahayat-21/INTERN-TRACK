@@ -187,13 +187,12 @@ const rejected = internships.filter((i) => i.status === "rejected");
               <div className="table-row" key={item._id}>
                 <span>{item.student.name}</span>
                 <span>{item.company}</span>
-                <span className="pill" style={{marginLeft:"-20px"}}>{item.type}</span>
-                <span className={`status ${item.status}`} style={{marginLeft:"-20px"}}>
+                <span className="pill">{item.type}</span>
+                <span className={`status ${item.status}`}>
                   {item.status}
                 </span>
                 <button
                   className="review-btn"
-                  style={{marginLeft:"-20px"}}
                   onClick={() => navigate(`/internships/mentor/${item._id}`)}
                 >
                   {item?.status}

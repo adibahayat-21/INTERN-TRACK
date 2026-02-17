@@ -1,23 +1,71 @@
 import AuditLogModel from '../models/AuditLog.js';
 import InternshipModel from '../models/Internship.js'
-import generateDocumentSummary from '../services/ai/documentSummaryService.js';
+import generateGeminiSummary from '../services/ai/documentSummaryService.js';
 import extractFieldsFromText from '../services/ai/fieldExtractionService.js';
 import calculateSimilarity from '../services/ai/plagiarismService.js';
+import extractFieldAI from '../services/ai/ExtractFieldAI.js';
 
 // ==========================================================================================================================
 
 const extractingFields = async (req, res) => {
-    const documentData = req.body.documentText;
-    if (!documentData || typeof documentData !== "string")
-        return res.status(400).json({ message: "Invalid document text" });
-    try {
-        const extractedFields = extractFieldsFromText(documentData);
-        return res.status(200).json({ message: "Fields extracted successfully", extractedFields });
-    } catch (err) {
-        console.error("Error extracting fields:", err);
-        return res.status(500).json({ message: "Failed to extract fields from document" })
+  const documentData = req.body.documentText;
+
+  if (!documentData || typeof documentData !== "string") {
+    return res.status(400).json({ message: "Invalid document text" });
+  }
+
+  try {
+    // ================================
+    // STEP 1: regex extraction (FAST)
+    // ================================
+    const regexFields = extractFieldsFromText(documentData);
+
+    let finalFields = { ...regexFields };
+
+    // ================================
+    // STEP 2: check missing fields
+    // ================================
+    const isMissing = Object.values(regexFields).some(
+      (v) => v === null || v === ""
+    );
+
+    // ================================
+    // STEP 3: AI fallback (SMART)
+    // ================================
+    if (isMissing) {
+      try {
+        const aiFields = await extractFieldAI(documentData);
+
+        //  merge — AI only fills missing
+        finalFields = {
+          company: regexFields.company || aiFields.company || null,
+          role: regexFields.role || aiFields.role || null,
+          department: regexFields.department || aiFields.department || null,
+          duration: regexFields.duration || aiFields.duration || null,
+          startDate: regexFields.startDate || aiFields.startDate || null,
+          endDate: regexFields.endDate || aiFields.endDate || null,
+        };
+      } catch (aiErr) {
+        console.error("AI fallback failed:", aiErr.message);
+      }
     }
-}
+
+    // ================================
+    // STEP 4: response
+    // ================================
+    return res.status(200).json({
+      message: "Fields extracted successfully",
+      extractedFields: finalFields,
+    });
+
+  } catch (err) {
+    console.error("Error extracting fields:", err);
+    return res.status(500).json({
+      message: "Failed to extract fields from document",
+    });
+  }
+};
+
 
 // ==============================================================================================================================================================================================
 
@@ -137,44 +185,94 @@ const showInternshipsForMentor = async (req, res) => {
 
 const showSummaryOfInternship = async (req, res) => {
     try {
-        const internshipId = req.params.internshipId; // url se fetch krna h internship id
-        const mentorId = req.user.userId;    // mentor id ko jwt se fetch krenge mtlb jo login h uska id
+        const internshipId = req.params.internshipId;
+        const mentorId = req.user.userId;
 
+        // 🔹 Find internship
         const internship = await InternshipModel.findById(internshipId);
 
-        if (!internship)   //agar internship hi nhi mili db m to
-        {
+        if (!internship) {
             return res.status(404).json({ message: "Internship not found" });
         }
 
-        // security check mtlb ki jo mentor internship dekh rha h wo hi us internship ka assigned mentor h ya nhi
+        // 🔹 Security check
         if (internship.mentor?.toString() !== mentorId) {
-            return res.status(403).json({ message: "You are not authorized to view this summary" });
+            return res.status(403).json({
+                message: "You are not authorized to view this summary"
+            });
         }
 
-        // already generated
+        // 🔹 If already generated → return cached summary
         if (internship.aiSummary) {
-            return res.status(200).json({ message: "Summary fetched successfully", summary: internship.aiSummary });
+            return res.status(200).json({
+                message: "Summary fetched successfully",
+                summary: internship.aiSummary
+            });
         }
 
-        const text = internship.documentText || "";
+        // =====================================================
+        //  STEP 1: Calculate duration
+        // =====================================================
 
-        // generate new
-        const summary =
-            text.length < 50
-                ? text  //mtlb agar uski length 50 h to whi pura text summary m de denge
-                : generateDocumentSummary(internship.documentText);  //aur agar text bda h to fir uski summary generate krenge us ai wale function ko call krke
+        const durationMonths =
+            internship.startDate && internship.endDate
+                ? (new Date(internship.endDate).getFullYear() -
+                    new Date(internship.startDate).getFullYear()) * 12 +
+                (new Date(internship.endDate).getMonth() -
+                    new Date(internship.startDate).getMonth())
+                : internship.extractedFields?.duration || "Not specified";
 
-        internship.aiSummary = summary;   //fir jo summary generate hoke aayi h usko internship ke aiSummary field m store kr denge db m
+        // =====================================================
+        //  STEP 2: Build rich context (VERY IMPORTANT)
+        // =====================================================
+
+        const contextText = `
+Internship Details:
+Company: ${internship.company}
+Role: ${internship.role}
+Department: ${internship.department}
+Type: ${internship.type}
+Duration: ${durationMonths} months
+
+Extracted Fields:
+Company: ${internship.extractedFields?.company || "N/A"}
+Role: ${internship.extractedFields?.role || "N/A"}
+Department: ${internship.extractedFields?.department || "N/A"}
+
+Description:
+${internship.documentText || ""}
+`;
+
+        // =====================================================
+        //  STEP 3: Generate summary
+        // =====================================================
+
+        const summary = await generateGeminiSummary(contextText);
+
+        // =====================================================
+        //  STEP 4: Save in DB (cache)
+        // =====================================================
+
+        internship.aiSummary = summary;
         await internship.save();
 
-        return res.status(200).json({ message: "Summary generated successfully", summary });
+        // =====================================================
+        //  STEP 5: Send response
+        // =====================================================
+
+        return res.status(200).json({
+            message: "Summary generated successfully",
+            summary
+        });
 
     } catch (err) {
         console.error("Error generating summary:", err);
-        return res.status(500).json({ message: "Failed to generate summary" });
+        return res.status(500).json({
+            message: "Failed to generate summary"
+        });
     }
 };
+
 
 // ================================================================================================================================
 

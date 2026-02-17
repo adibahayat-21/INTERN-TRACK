@@ -1,3 +1,5 @@
+// ============================== This AI feature only contains gemini integration llm but not regex and not rule based  ========================
+
 // IS FILE KA ROLE
 // Long text → short meaningful summary generate karna
 
@@ -41,47 +43,66 @@
 
 // Ye AI-assisted summarization maana jaata hai
 
-const generateDocumentSummary=(text)=>{
-    // basic validation
-    if(!text || typeof text!=="string")
-        throw new Error("Invalid document text")
-    if(text.length<100)
-    {
-        return { summay:"Document is too short to generate a meaningful summary." }
+// later humne fir gemini ai ko integrate kiya h jisse summary ai ke through aarhi h
+
+// This feature uses Gemini LLM–based AI summarization, not rule-based NLP. I prepare structured context .
+// from internship data and send it to Gemini, which generates a professional summary. The result is cached 
+// in the database to avoid repeated API calls.
+
+
+import { GoogleGenAI } from "@google/genai";
+
+// Why did you keep fields = {} ?
+// “I kept the fields parameter optional using a default empty object to make the function flexible.
+//  This allows the function to work even when structured metadata is not available, preventing runtime errors.”
+
+const generateGeminiSummary = async (text, fields = {}) => {
+  try {
+    if (!text) {
+      throw new Error("No text provided for AI summary");
     }
 
-    // Processing (basic NLP)
-    const cleanedText=text.replace(/\n+/g," ").replace(/\s+/g," ").trim();
+    // ✅ create client INSIDE function
+    const ai = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
+    });
 
-    // split text into sentence
-    const sentences=cleanedText.split(". ");
+    const prompt = `
+You are an expert academic reviewer.
 
-    const keywords = [
-    "internship",
-    "training",
-    "project",
-    "role",
-    "worked",
-    "duration",
-    "developed",
-    "implemented"
-  ];
+Generate a short professional internship summary using the data below.
 
-   const importantSentences = sentences.filter(sentence =>
-    keywords.some(keyword =>
-      sentence.toLowerCase().includes(keyword)
-    )
-  );
+Internship Details:
+Company: ${fields.company || "Not specified"}
+Role: ${fields.role || "Not specified"}
+Department: ${fields.department || "Not specified"}
+Duration: ${fields.duration || "Not specified"}
 
-  const summarySentences =
-    importantSentences.length > 0
-      ? importantSentences.slice(0, 3)
-      : sentences.slice(0, 3);
+Document Description:
+${text}
 
-    return summarySentences.join(". ")+".";
-}
+Rules:
+- Keep summary within 3–4 lines
+- Use professional tone
+- Focus on work done by student and also tell about the company in brief
+`;
 
-export default generateDocumentSummary;
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+    });
+
+    return response.text;
+  } catch (error) {
+    console.error("Gemini summary error:", error.message);
+    throw new Error("AI summary generation failed");
+  }
+};
+
+export default generateGeminiSummary;
+
+
+
 
 
 // Text validate karta hai

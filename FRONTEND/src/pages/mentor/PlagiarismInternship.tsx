@@ -5,8 +5,9 @@ import axios from "axios";
 import { useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+// import html2canvas from "html2canvas";
 import { useRef } from "react";
+import { NavLink } from "react-router-dom";
 
 
 const PlagiarismDetail = () => {
@@ -87,11 +88,11 @@ const PlagiarismDetail = () => {
     if (!reportRef.current)
       return;
 
-    const canvas = await html2canvas(reportRef.current, {
-      scale: 3,
-      useCORS: true,
-      backgroundColor: "#ffffff"
-    });
+    // const canvas = await html2canvas(reportRef.current, {
+    //   scale: 3,
+    //   useCORS: true,
+    //   backgroundColor: "#ffffff"
+    // });
 
     const pdf = new jsPDF();
     pdf.text("Plagiarism Report", 20, 20);
@@ -117,6 +118,11 @@ const PlagiarismDetail = () => {
     return (
   <DashboardLayout>
     <div className="plagiarism-page-wrapper">
+      <div className="back-wrapper">
+          <NavLink to={`/internships/mentor/${internshipId}`} className="back-button" style={{backgroundColor:"darkblue"}}>
+            ← Back to Dashboard
+          </NavLink>
+        </div>
 
       {/* ✅ STUDENT CARD */}
       <div className="detail-card">
