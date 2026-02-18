@@ -186,7 +186,7 @@ const FullDetail = () => {
                                 className="view-doc-btn"
                                 onClick={() =>
                                     window.open(
-                                        `http://localhost:3000/${internship.documentFile}`,
+                                        internship.documentFile,
                                         "_blank",
                                         "width=800,height=600"
                                     )

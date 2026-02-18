@@ -75,12 +75,14 @@ const uploadInternship = async (req, res) => {
     const studentId = req.user.userId;   //yha value chahiye jo ki authMiddleware se mil hi rhi h , hume object nhi chahiye isliye humne iska {} use nhi kiya kyuki yeh object destructing ke liye use hota h
     // id ko jwt se fetch krenge mtlb jo login h uska id aur uske liye fir wo dashboard type ka open ho jaega jisme internship upload krne ka option h
     const { companyName, role, type, startDate, endDate, department, documentText, extractedFields } = req.body;
+    
     // if (!documentText || !extractedFields)
     //     return res.status(400).json({ message: "Document text and extracted fields are required" });
-    const filePath = req.file?.path; // multer middleware se file ka path mil jaega req.file se
+
+    const fileUrl = req.file?.secure_url || req.file?.path; // multer middleware se file ka path mil jaega req.file se
 
     // Validation of required fields
-    if (!companyName || !role || !type || !startDate || !endDate || !department || !documentText || !filePath) {
+    if (!companyName || !role || !type || !startDate || !endDate || !department || !documentText || !fileUrl) {
         return res.status(400).json({ message: "All fields are required" });
     }
     try {
@@ -98,7 +100,7 @@ const uploadInternship = async (req, res) => {
             endDate,
             department,
             documentText,
-            documentFile: filePath,
+            documentFile: fileUrl,
             extractedFields,
             status: "pending"
         });

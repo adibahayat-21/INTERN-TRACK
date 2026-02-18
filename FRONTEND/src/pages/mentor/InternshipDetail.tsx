@@ -182,7 +182,7 @@ const InternshipDetail = () => {
                 className="doc-btn"
                 onClick={() =>
                   window.open(
-                    `http://localhost:3000/${internship?.documentFile}`,
+                    internship?.documentFile,
                     "_blank",
                     "width=600,height=500"
                   )
